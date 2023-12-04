@@ -1,0 +1,29 @@
+# example values
+
+indexing-settings:
+  sites:
+    - url: https://nikoartgallery.com
+      name: Галерея Нико
+    - url: https://www.svetlovka.ru
+      name: Светловка
+    - url: https://www.lutherancathedral.ru
+      name: КАФЕДРАЛЬНЫЙ СОБОР
+    - url: https://dombulgakova.ru
+      name: Дом Булгакова
+
+
+server:
+  port: 8080
+
+spring:
+  datasource:
+    username: root
+    password: TestTest
+    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
