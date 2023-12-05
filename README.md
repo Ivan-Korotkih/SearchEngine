@@ -4,9 +4,9 @@ _ _ _ _ _
 _ _ _ _ _
 ### *Процесс поиска*
 1. Перед поиском нужных слов, необходимо произвести индексацию сайтов (осуществить поис русских слов на каждой странице сайтов)
-   + Для этого на вкладке MANAGEMENT нажать кнопку START INDEXING ![management](https://drive.google.com/file/d/15dsVdnn-4qy-lm3uH1mLUSzqNGHzbpBV/view?usp=drive_link)
-   + Результатом чего во вкладке DASHBOARD появится статистика о проиндексированных сайтах (количество найденых страниц, лемм и ошибках, возникших при индексации) ![DASHBOARD](https://drive.google.com/file/d/1yCvG4k9czKlnzrIar0rp8XsTJW6ZIIQD/view?usp=sharing)
-2. Во вкладке SEARCH выбрать сайт (все сайты), по которому будет производится поиcк, в поле *query* ввести поисковый запрос и нажать кнопку SEARCH. Получить результат ![reqwest](https://drive.google.com/file/d/1ec3kXB2z7WPo0HcLom9fnu7Tg8pkRpuR/view?usp=sharing)
+   + Для этого на вкладке MANAGEMENT нажать кнопку START INDEXING ![management](https://lh3.googleusercontent.com/drive-viewer/AK7aPaDyWlhtRHFr5A7qpHdzgE_I8G9e4DtGJfdvqDCt9Asc5aG2Z_gIgtgIEy_pjeVKjB8ZaDGcFUzEpi39nXTyUmNg7l4ZpQ=w1920-h935)
+   + Результатом чего во вкладке DASHBOARD появится статистика о проиндексированных сайтах (количество найденых страниц, лемм и ошибках, возникших при индексации) ![DASHBOARD](https://lh3.googleusercontent.com/drive-viewer/AK7aPaCodRLefjJGavoTL4Lw2yajvhpkICfVJAww2uZwo1QiZRzg3XyjPZNAbdjDQOAHlo8WCpUvTNEm7lsPpO_Ka0ughtb1og=w1920-h935)
+2. Во вкладке SEARCH выбрать сайт (все сайты), по которому будет производится поиcк, в поле *query* ввести поисковый запрос и нажать кнопку SEARCH. Получить результат ![reqwest](https://lh3.googleusercontent.com/drive-viewer/AK7aPaDPARIY0V3ltX5NBrBHyLYWDZDHCWLir3D76VUo5ZoUAMBKrDX69ePHLTVdLlGQHMHiRS5Yqpnl72YPIt0fITRpEoYZwg=w1920-h935)
    + При нажатии на один из результатов переходим на страницу с необходимыми словами.
 3. В дополнении к функционалу программы есть возможность произвести переиндексацию отдельной страницы во вкладке MANAGEMENT, введя в поле Add/update page неоюходимый адрес страницы и нажав на кнопку Add/update
 _ _ _ _ _
