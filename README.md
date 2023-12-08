@@ -8,7 +8,7 @@ _ _ _ _ _
    + Результатом чего во вкладке DASHBOARD появится статистика о проиндексированных сайтах (количество найденых страниц, лемм и ошибках, возникших при индексации) ![DASHBOARD](https://lh3.googleusercontent.com/drive-viewer/AK7aPaCodRLefjJGavoTL4Lw2yajvhpkICfVJAww2uZwo1QiZRzg3XyjPZNAbdjDQOAHlo8WCpUvTNEm7lsPpO_Ka0ughtb1og=w1920-h935)
 2. Во вкладке SEARCH выбрать сайт (все сайты), по которому будет производится поиcк, в поле *query* ввести поисковый запрос и нажать кнопку SEARCH. Получить результат ![reqwest](https://lh3.googleusercontent.com/drive-viewer/AK7aPaDPARIY0V3ltX5NBrBHyLYWDZDHCWLir3D76VUo5ZoUAMBKrDX69ePHLTVdLlGQHMHiRS5Yqpnl72YPIt0fITRpEoYZwg=w1920-h935)
    + При нажатии на один из результатов переходим на страницу с необходимыми словами.
-3. В дополнении к функционалу программы есть возможность произвести переиндексацию отдельной страницы во вкладке MANAGEMENT, введя в поле Add/update page неоюходимый адрес страницы и нажав на кнопку Add/update
+3. В дополнении к функционалу программы есть возможность произвести переиндексацию отдельной страницы во вкладке MANAGEMENT, введя в поле Add/update page необходимый адрес страницы и нажав на кнопку Add/update
 _ _ _ _ _
 ### *Cтэк используемых технологий*
 + ***SpringBoot***
