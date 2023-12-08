@@ -19,7 +19,10 @@ _ _ _ _ _
 + *imgscalr-lib*
 _ _ _ _ _
 ### *Запуск программы*
-+ Скачать SearchEngine-1.0-SNAPSHOT.jar
++ Скачать файлы **SearchEngine-1.0-SNAPSHOT.jar** и **application.yaml** (в одну и туже папку)
++ В файле application.yaml изменить строки на ваши значения, используемые в **MySQLWorkbench**
+     + username: ваше имя
+     + password: ваш пароль
 + В командной строке:
     + перейти в директорию где хранится файл SearchEngine-1.0-SNAPSHOT.jar. Н-р `C:\Users\Иван> cd C:\Users\Иван\Desktop`
     + выполнить команду: `C:\Users\Иван\Desktop>java -jar SearchEngine-1.0-SNAPSHOT.jar`
