@@ -9,7 +9,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 
 public class Main {
-    public static void main(String[] args){
+    /*public static void main(String[] args){
         String link = "http://radiomv.ru";
         try {
             Connection.Response response = Jsoup.connect(link).execute();
@@ -28,6 +28,5 @@ public class Main {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-
-    }
+    }*/
 }
