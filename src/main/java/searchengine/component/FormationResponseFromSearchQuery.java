@@ -1,111 +1,32 @@
-package searchengine.services;
+package searchengine.component;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-import searchengine.model.*;
-import searchengine.response.Data;
-import searchengine.response.Response;
+import org.springframework.stereotype.Component;
+import searchengine.dto.statistics.response.Data;
+import searchengine.dto.statistics.response.Response;
+import searchengine.model.Lemma;
+import searchengine.model.SiteTable;
+import searchengine.service.FormationTableLemmas;
 
 import java.util.*;
 
-@Service
-public class Search {
-    private SiteTableRepository siteTableRepository;
-    private PageRepository pageRepository;
-    private LemmaRepository lemmaRepository;
-    private IndexRepository indexRepository;
+@Component
+public class FormationResponseFromSearchQuery {
     private final JdbcTemplate jdbcTemplate;
-    private String[] queryArray;
-    private List<SiteTable> siteOfQueryList;
-    private List<String> lemmaListOfQuery;
-    private List<List<Lemma>> sortedAscendingLemmaList;
+    @Autowired
+    FormationTableLemmas formationTableLemmas;
+    @Autowired
+    CheckingSearchQuery checkingSearchQuery;
     private List<Data> dataList;
-    private int pageIdListSize;
-    private final int[] ratioSnippet = {25, 20, 15, 15, 10, 10, 5, 5, 5, 5 };
+    private List<List<Lemma>> sortedAscendingLemmaList;
     private String answerForCheckLemma;
-    @Autowired
-    FormationLemmasAndIndexes formationLemmasAndIndexes;
+    private int pageIdListSize;
+    private final int[] ratioSnippet = {25, 20, 15, 15, 10, 10, 5, 5, 5, 5};
 
-    @Autowired
-    public Search(SiteTableRepository siteTableRepository, PageRepository pageRepository,
-                  LemmaRepository lemmaRepository, IndexRepository indexRepository,
-                  JdbcTemplate jdbcTemplate) {
-        this.siteTableRepository = siteTableRepository;
-        this.pageRepository = pageRepository;
-        this.lemmaRepository = lemmaRepository;
-        this.indexRepository = indexRepository;
+    public FormationResponseFromSearchQuery(JdbcTemplate jdbcTemplate, FormationTableLemmas formationTableLemmas) {
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    public Response getResponseFromSearch(String query, String site, int offset, int limit) {
-        Response response = new Response();
-
-        queryArray = query.split("\\s+");
-
-        if (queryArray.length > 5){
-            response.setResult(false);
-            response.setError("Задан слишком длинный запрос (максимальное количество слов - 5)");
-            return response;
-        }
-        if (query.trim().isEmpty()) {
-            response.setResult(false);
-            response.setError("Задан пустой поисковый запрос");
-            return response;
-        }
-        if (isInvalidQuery(query)) {
-            response.setResult(false);
-            response.setError("Введённый поисковый запрос не содержит русских слов");
-            return response;
-        }
-        if (isIndexedSite(site)) {
-            response = searchPagesThatMeetTheQuery(response, limit);
-        } else {
-            response.setResult(false);
-            response.setError("Поиск невозможен сайты(сайт) имеют статус INDEXING или FAILED");
-        }
-        return response;
-    }
-    public Response scrollingThroughPages(int offset, int limit){
-        Response response = new Response();
-
-        List<Data> dataListResponse = new ArrayList<>();
-        for (int i = offset; i < Math.min(limit + offset, dataList.size()); i++){
-            dataListResponse.add(dataList.get(i));
-        }
-        response.setResult(true);
-        response.setCount(pageIdListSize);
-        response.setData(dataListResponse);
-        return response;
-    }
-
-    public boolean isInvalidQuery(String query) {
-        lemmaListOfQuery = new ArrayList<>(createLemmaList(query));
-        return lemmaListOfQuery.isEmpty();
-    }
-
-    public boolean isIndexedSite(String site) {
-        siteOfQueryList = new ArrayList<>();
-        String sqlCount = site == null ? "SELECT count(*) FROM sites WHERE status = 'INDEXED'" :
-                "SELECT count(*) FROM sites WHERE status = 'INDEXED' AND url = '" + site + "'";
-        if (jdbcTemplate.queryForObject(sqlCount, Integer.class) == 0) {
-            return false;
-        }
-        String sqlSites = site == null ? "SELECT * FROM sites WHERE status = 'INDEXED'" :
-                "SELECT * FROM sites WHERE status = 'INDEXED' AND url = '" + site + "'";
-        siteOfQueryList = jdbcTemplate.query(sqlSites, (rs, rowNum) -> {
-            SiteTable siteTable = new SiteTable();
-            siteTable.setId(rs.getInt("id"));
-            siteTable.setUrl(rs.getString("url"));
-            siteTable.setName(rs.getString("name"));
-            return siteTable;
-                });
-        System.out.println("количество обрабатываеммых сайтов " + siteOfQueryList.size());
-        return true;
-    }
-
-    public List<String> createLemmaList(String query) {
-        return formationLemmasAndIndexes.createListLemmas(query);
+        this.formationTableLemmas = formationTableLemmas;
     }
 
     public Response searchPagesThatMeetTheQuery(Response response, int limit) {
@@ -116,10 +37,9 @@ public class Search {
                 pageIdListSize = pageIdList.size();
                 List<Map.Entry<Integer, Float>> sortedDescendingRelativeRelevanceList
                         = calculatingRelevance(pageIdList);
-                dataList = new ArrayList<>();
-                dataList = formingListOfFoundPages(sortedDescendingRelativeRelevanceList);
+                formingListOfFoundPages(sortedDescendingRelativeRelevanceList);
                 List<Data> dataListResponse = new ArrayList<>();
-                for (int i = 0; i < Math.min(limit, dataList.size()); i++){
+                for (int i = 0; i < Math.min(limit, dataList.size()); i++) {
                     dataListResponse.add(dataList.get(i));
                 }
                 response.setResult(true);
@@ -140,37 +60,37 @@ public class Search {
 
         // проверяем есть ли в таблице Lemmas нужные нам леммы (для каждого сайта), и кол-во страниц где она встречается
         answerForCheckLemma = "";
-        for (SiteTable site : new ArrayList<>(siteOfQueryList)) {
-            for (String lemmaOfQuery : new ArrayList<>(lemmaListOfQuery)) {
+        for (SiteTable site : new ArrayList<>(checkingSearchQuery.siteOfQueryList)) {
+            for (String lemmaOfQuery : new ArrayList<>(checkingSearchQuery.lemmaListOfQuery)) {
                 String sqlCount = "SELECT count(*) FROM lemmas WHERE lemma = '"
                         + lemmaOfQuery + "' AND site_id = " + site.getId();
                 if (jdbcTemplate.queryForObject(sqlCount, Integer.class) == 0) {
-                    siteOfQueryList.remove(site);
+                    checkingSearchQuery.siteOfQueryList.remove(site);
                     answerForCheckLemma = "Введённые слова или некоторые из них не найдены";
                 } else {
                     String sqlFrequency = "SELECT frequency FROM lemmas WHERE lemma = '"
                             + lemmaOfQuery + "' AND site_id = " + site.getId();
                     int count = jdbcTemplate.queryForObject(sqlFrequency, Integer.class);
                     if (count > 100) {
-                        lemmaListOfQuery.remove(lemmaOfQuery);
+                        checkingSearchQuery.lemmaListOfQuery.remove(lemmaOfQuery);
                         answerForCheckLemma = "Введённые слова находятся на большом количестве страниц - "
                                 + count + " поэтому поиск прекращён";
                     }
                 }
             }
         }
-        if (lemmaListOfQuery.isEmpty() || siteOfQueryList.isEmpty()) {
+        if (checkingSearchQuery.lemmaListOfQuery.isEmpty() || checkingSearchQuery.siteOfQueryList.isEmpty()) {
             return false;
         }
         System.out.println("Все или часть лемм найдены");
 
         // содаем список Мар лемм и количество страниц, на которых слово встречается хотя бы один раз, для каждого сайта
         List<HashMap<Lemma, Integer>> mapLemmaFrequencyList = new ArrayList<>();
-        for (SiteTable site : siteOfQueryList) {
+        for (SiteTable site : checkingSearchQuery.siteOfQueryList) {
             HashMap<Lemma, Integer> map = new HashMap<>();
-            for (String lemmaOfQuery : lemmaListOfQuery) {
+            for (String lemmaOfQuery : checkingSearchQuery.lemmaListOfQuery) {
                 String sqlLemma = "SELECT * FROM lemmas WHERE lemma = '"
-                                   + lemmaOfQuery + "' AND site_id = " + site.getId();
+                        + lemmaOfQuery + "' AND site_id = " + site.getId();
                 Map<String, Object> object = jdbcTemplate.queryForMap(sqlLemma);
                 Lemma lemma = new Lemma();
                 lemma.setId((Integer) object.get("id"));
@@ -185,7 +105,7 @@ public class Search {
         // сортируем каждую Мар в списке mapLemmaFrequencyList по возрастанию, и создаем отсортированный список лем
         // для каждого сайта
         sortedAscendingLemmaList = new ArrayList<>();
-        for (HashMap<Lemma, Integer> map : mapLemmaFrequencyList){
+        for (HashMap<Lemma, Integer> map : mapLemmaFrequencyList) {
             List<Map.Entry<Lemma, Integer>> sortedLemmaMap = map.entrySet().stream()
                     .sorted(Map.Entry.comparingByValue()).toList();
             List<Lemma> sortedLemmaList = new ArrayList<>();
@@ -226,9 +146,9 @@ public class Search {
         HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
         for (int pageId : pageIdList) {
             int absoluteRelevance = 0;
-            for (String lemma : lemmaListOfQuery) {
+            for (String lemma : checkingSearchQuery.lemmaListOfQuery) {
                 String sql = "SELECT indexes.`rank` FROM indexes JOIN lemmas ON lemmas.id = indexes.lemma_id " +
-                             "WHERE indexes.page_id = " + pageId + " AND lemmas.lemma = '" + lemma + "'" ;
+                        "WHERE indexes.page_id = " + pageId + " AND lemmas.lemma = '" + lemma + "'";
                 Integer rank = jdbcTemplate.queryForObject(sql, Integer.class);
                 absoluteRelevance += rank;
             }
@@ -252,9 +172,9 @@ public class Search {
         return sortedDescendingRelativeRelevanceList;
     }
 
-    public List<Data> formingListOfFoundPages(List<Map.Entry<Integer, Float>> sortedDescendingRelativeRelevanceList) {
+    public void formingListOfFoundPages(List<Map.Entry<Integer, Float>> sortedDescendingRelativeRelevanceList) {
 
-        List<Data> dataList = new ArrayList<>();
+        dataList = new ArrayList<>();
 
         for (Map.Entry<Integer, Float> line : sortedDescendingRelativeRelevanceList) {
             Data data = new Data();
@@ -284,17 +204,16 @@ public class Search {
 
             dataList.add(data);
         }
-        return dataList;
     }
 
     public String searchSnippet(String content) {
 
-        List<String> lemmaContent = createLemmaList(content);
+        List<String> lemmaContent = formationTableLemmas.createListLemmas(content);
         String[] text = lemmaContent.toArray(new String[0]);
         List<String> result = new ArrayList<>();
-        int lengthSnippet = ratioSnippet[lemmaListOfQuery.size()];
+        int lengthSnippet = ratioSnippet[checkingSearchQuery.lemmaListOfQuery.size()];
 
-        for (String s : lemmaListOfQuery) {
+        for (String s : checkingSearchQuery.lemmaListOfQuery) {
             boolean isContains = false;
             for (String r : result) {
                 if (r.contains(s)) {
@@ -320,14 +239,28 @@ public class Search {
         StringBuilder finalSnippet = new StringBuilder();
         for (String r : result) {
             String stringR = r;
-            for (String l : lemmaListOfQuery) {
+            for (String l : checkingSearchQuery.lemmaListOfQuery) {
                 stringR = stringR.replace(l + " ", " <b>" + l + "</b> ");
             }
-            for (String q : queryArray){
+            for (String q : checkingSearchQuery.queryArray) {
                 stringR = stringR.replace(q + " ", " <b>" + q + "</b> ");
             }
             finalSnippet.append(stringR).append(" ");
         }
         return finalSnippet.toString();
     }
+
+    public Response scrollingThroughPages(int offset, int limit) {
+        Response response = new Response();
+
+        List<Data> dataListResponse = new ArrayList<>();
+        for (int i = offset; i < Math.min(limit + offset, dataList.size()); i++) {
+            dataListResponse.add(dataList.get(i));
+        }
+        response.setResult(true);
+        response.setCount(pageIdListSize);
+        response.setData(dataListResponse);
+        return response;
+    }
 }
+

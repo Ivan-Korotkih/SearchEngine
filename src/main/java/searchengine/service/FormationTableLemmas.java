@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.service;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import searchengine.model.*;
-import searchengine.response.Response;
+import searchengine.repository.PageRepository;
+import searchengine.repository.SiteTableRepository;
+import searchengine.dto.statistics.response.Response;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -17,28 +19,22 @@ import java.util.*;
 import java.util.concurrent.Semaphore;
 
 @Service
-public class FormationLemmasAndIndexes {
+public class FormationTableLemmas {
     private SiteTableRepository siteTableRepository;
     private PageRepository pageRepository;
-    private LemmaRepository lemmaRepository;
-    private IndexRepository indexRepository;
     private JdbcTemplate jdbcTemplate;
-
     private List<Page> pageList;
     private HashMap<Integer, List<String>> lemmasListAllPages;
     private Map<String, Integer> lemmasMapFromTableLemmas;
     private List<String[]> lemmasListFromTableIndex;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final Semaphore SEMAPHORE = new Semaphore(CORES, true);
-
     @Autowired
-    public FormationLemmasAndIndexes(SiteTableRepository siteTableRepository, PageRepository pageRepository,
-                                     LemmaRepository lemmaRepository, IndexRepository indexRepository,
-                                     JdbcTemplate jdbcTemplate) {
+    FormationTableIndexes formationTableIndexes;
+    public FormationTableLemmas(SiteTableRepository siteTableRepository, PageRepository pageRepository,
+                                JdbcTemplate jdbcTemplate) {
         this.siteTableRepository = siteTableRepository;
         this.pageRepository = pageRepository;
-        this.lemmaRepository = lemmaRepository;
-        this.indexRepository = indexRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -69,7 +65,7 @@ public class FormationLemmasAndIndexes {
         createMapLemmasFromTableLemma();
         createListLemmasFromTableIndexes();
         writeDataToTableLemmas(siteId);
-        writeDataToTableIndexes(siteId);
+        formationTableIndexes.writeDataToTableIndexes(lemmasListFromTableIndex, siteId);
     }
 
     public void createListPagesOfSite(int siteId) {
@@ -193,7 +189,7 @@ public class FormationLemmasAndIndexes {
                         + siteId + " and lemma = '" + line.getKey() + "'";
                 jdbcTemplate.update(sql);
             }
-            writeDataToTableIndexes(siteId);
+            formationTableIndexes.writeDataToTableIndexes(lemmasListFromTableIndex, siteId);
         }
     }
 
@@ -271,39 +267,6 @@ public class FormationLemmasAndIndexes {
                     .append(line.getKey())
                     .append("', ")
                     .append(line.getValue())
-                    .append("),");
-        }
-        stringBuilder.replace(stringBuilder.length() - 1, stringBuilder.length(), ";");
-        jdbcTemplate.update(stringBuilder.toString());
-    }
-
-    public void writeDataToTableIndexes(int siteId) {
-
-        List<Index> indexList = new ArrayList<>();
-
-        Iterable<Lemma> iterable = lemmaRepository.findAll();
-        for (String[] line : lemmasListFromTableIndex) {
-            Index index = new Index();
-            index.setPageId(Integer.parseInt(line[2]));
-            index.setRank(Float.parseFloat(line[1]));
-            for (Lemma lemma : iterable) {
-                if (lemma.getLemma().equals(line[0]) && lemma.getSite().getId() == siteId) {
-                    index.setLemmaId(lemma.getId());
-                    break;
-                }
-            }
-            indexList.add(index);
-        }
-        StringBuilder stringBuilder = new StringBuilder();
-        String sql = "INSERT INTO indexes(`page_id`, `lemma_id`, `rank`) VALUES ";
-        stringBuilder.append(sql);
-        for (Index index : indexList) {
-            stringBuilder.append("(")
-                    .append(index.getPageId())
-                    .append(", ")
-                    .append(index.getLemmaId())
-                    .append(", ")
-                    .append(index.getRank())
                     .append("),");
         }
         stringBuilder.replace(stringBuilder.length() - 1, stringBuilder.length(), ";");

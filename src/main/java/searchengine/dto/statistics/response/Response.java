@@ -1,4 +1,4 @@
-package searchengine.response;
+package searchengine.dto.statistics.response;
 
 import java.util.List;
 

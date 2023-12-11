@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.service;
 
 import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
@@ -11,7 +11,8 @@ import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.*;
-import searchengine.response.Response;
+import searchengine.repository.SiteTableRepository;
+import searchengine.dto.statistics.response.Response;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -22,20 +23,19 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 
 @Service
-public class FormationSitesAndPages {
+public class FormationTableSites {
     private SitesList sitesList;
     private SiteTableRepository siteTableRepository;
-    private PageRepository pageRepository;
     private JdbcTemplate jdbcTemplate;
     private Vector<String> allLinksSite = new Vector<>();
     private boolean isCanWork;
     @Autowired
-    FormationLemmasAndIndexes formationLemmasAndIndexes;
-    public FormationSitesAndPages(SitesList sitesList, SiteTableRepository siteTableRepository,
-                                  PageRepository pageRepository, JdbcTemplate jdbcTemplate) {
+    FormationTablePages formationTablePages;
+    @Autowired
+    FormationTableLemmas formationTableLemmas;
+    public FormationTableSites(SitesList sitesList, SiteTableRepository siteTableRepository, JdbcTemplate jdbcTemplate) {
         this.sitesList = sitesList;
         this.siteTableRepository = siteTableRepository;
-        this.pageRepository = pageRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -95,7 +95,7 @@ public class FormationSitesAndPages {
 
                 new Thread(() ->{
                     ForkJoinPool forkJoinPool = new ForkJoinPool();
-                    forkJoinPool.invoke(new Indexing(site.getUrl(), site.getUrl(), site.getName(), siteTable));
+                    forkJoinPool.invoke(new Indexing(site.getUrl(), siteTable));
                     if (isCanWork()){
                         siteTable.setStatus(SiteTableEnum.INDEXED);
 
@@ -107,7 +107,7 @@ public class FormationSitesAndPages {
                     siteTableRepository.save(siteTable);
                     forkJoinPool.shutdown();
                     if (isCanWork){
-                        formationLemmasAndIndexes.fillingTablesLemmasAndIndexes(siteTable.getId());
+                        formationTableLemmas.fillingTablesLemmasAndIndexes(siteTable.getId());
                     }
                     System.out.println("Закончили искать страницы сайта " + site.getName());
                 }).start();
@@ -143,15 +143,11 @@ public class FormationSitesAndPages {
     }
 
     public class Indexing extends RecursiveAction {
-        private String urlSite;
         private String link;
-        private String name;
         private SiteTable siteTable;
 
-        public Indexing(String urlSite, String link, String name, SiteTable siteTable) {
-            this.urlSite = urlSite;
+        public Indexing(String link, SiteTable siteTable) {
             this.link = link;
-            this.name = name;
             this.siteTable = siteTable;
         }
 
@@ -167,45 +163,31 @@ public class FormationSitesAndPages {
                                         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
                                 .get();
 
-                        addNewPageToTablePages(document.html(), response.statusCode(), siteTable);
+                        formationTablePages.addNewPageToTablePages(link, document.html(), response.statusCode(), siteTable);
 
                         List<Indexing> tasks = new ArrayList<>();
                         Elements elements = document.select("a[href]");
                         elements.forEach(element -> {
                             String href = element.attr("abs:href");
                             href = href.toLowerCase().trim();
-                            if (href.startsWith(urlSite)) {
+                            if (href.startsWith(siteTable.getUrl())) {
                                 if (!(href.contains("?") || href.contains("#"))) {
                                     if (!(href.endsWith(".jpg") || href.endsWith(".pdf") || href.endsWith(".jpeg")
                                             || href.endsWith(".png") || href.endsWith(".xlsx")
                                             || href.endsWith(".eps") || href.endsWith(".doc"))) {
-                                        tasks.add(new Indexing(urlSite, href, name, siteTable));
+                                        tasks.add(new Indexing(href, siteTable));
                                     }
                                 }
                             }
                         });
                         invokeAll(tasks);
                     } catch (HttpStatusException e) {
-                        addNewPageToTablePages("", e.getStatusCode(), siteTable);
+                        formationTablePages.addNewPageToTablePages(link,"", e.getStatusCode(), siteTable);
                     } catch (IOException e) {
                         System.out.println(e.getMessage());
                     }
                 }
             }
-        }
-
-        public void addNewPageToTablePages(String content, int code, SiteTable siteTable){
-
-            Page page = new Page();
-            page.setPath(link.replaceFirst(urlSite, ""));
-            page.setContent(content);
-            page.setCode(code);
-            page.setSite(siteTable);
-            if (!urlSite.equals(link)) {
-                pageRepository.save(page);
-            }
-            siteTable.setStatusTime(LocalDateTime.now());
-            siteTableRepository.save(siteTable);
         }
     }
 }

@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.service;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -8,7 +8,7 @@ import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 import searchengine.model.SiteTable;
-import searchengine.model.SiteTableRepository;
+import searchengine.repository.SiteTableRepository;
 
 import java.util.ArrayList;
 import java.util.List;
