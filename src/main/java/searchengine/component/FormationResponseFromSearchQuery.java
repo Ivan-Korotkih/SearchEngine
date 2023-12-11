@@ -18,10 +18,10 @@ public class FormationResponseFromSearchQuery {
     FormationTableLemmas formationTableLemmas;
     @Autowired
     CheckingSearchQuery checkingSearchQuery;
-    private List<Data> dataList;
     private List<List<Lemma>> sortedAscendingLemmaList;
     private String answerForCheckLemma;
     private int pageIdListSize;
+    private List<Data> dataList;
     private final int[] ratioSnippet = {25, 20, 15, 15, 10, 10, 5, 5, 5, 5};
 
     public FormationResponseFromSearchQuery(JdbcTemplate jdbcTemplate, FormationTableLemmas formationTableLemmas) {

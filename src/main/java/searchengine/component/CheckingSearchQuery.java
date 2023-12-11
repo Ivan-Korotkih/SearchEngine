@@ -24,7 +24,7 @@ public class CheckingSearchQuery {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public Response getResponseFromSearch(String query, String site, int offset, int limit) {
+    public Response getResponseFromSearch(String query, String site, int limit) {
         Response response = new Response();
 
         queryArray = query.split("\\s+");
@@ -54,7 +54,7 @@ public class CheckingSearchQuery {
     }
 
     public boolean isInvalidQuery(String query) {
-        lemmaListOfQuery = new ArrayList<>(createLemmaList(query));
+        lemmaListOfQuery = new ArrayList<>(formationTableLemmas.createListLemmas(query));
         return lemmaListOfQuery.isEmpty();
     }
 
@@ -76,9 +76,5 @@ public class CheckingSearchQuery {
         });
         System.out.println("количество обрабатываеммых сайтов " + siteOfQueryList.size());
         return true;
-    }
-
-    public List<String> createLemmaList(String query) {
-        return formationTableLemmas.createListLemmas(query);
     }
 }

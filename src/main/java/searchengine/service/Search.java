@@ -16,7 +16,7 @@ public class Search {
     public Response getResponse(String query, String site, int offset, int limit) {
         Response response = new Response();
 
-        response = offset == 0 ? (checkingSearchQuery.getResponseFromSearch(query, site, offset, limit)) :
+        response = offset == 0 ? (checkingSearchQuery.getResponseFromSearch(query, site, limit)) :
                                  (formationResponseFromSearchQuery.scrollingThroughPages(offset, limit));
         return response;
     }
