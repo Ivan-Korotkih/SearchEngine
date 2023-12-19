@@ -1,12 +1,11 @@
 package searchengine.service;
 
-import org.apache.lucene.morphology.LuceneMorphology;
-import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import searchengine.component.LemmaList;
 import searchengine.model.*;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteTableRepository;
@@ -31,6 +30,8 @@ public class FormationTableLemmas {
     private final Semaphore SEMAPHORE = new Semaphore(CORES, true);
     @Autowired
     FormationTableIndexes formationTableIndexes;
+    @Autowired
+    LemmaList lemmaList;
     public FormationTableLemmas(SiteTableRepository siteTableRepository, PageRepository pageRepository,
                                 JdbcTemplate jdbcTemplate) {
         this.siteTableRepository = siteTableRepository;
@@ -43,13 +44,13 @@ public class FormationTableLemmas {
         lemmasListAllPages = new HashMap<>();
         lemmasMapFromTableLemmas = new HashMap<>();
         lemmasListFromTableIndex = new ArrayList<>();
-
         Thread thread = null;
         try {
             for (int i = 0; i < pageList.size(); i++) {
                 int x = i;
                 thread = new Thread(() -> {
-                    List<String> lemmaListOfPage = createListLemmas(pageList.get(x).getContent());
+                    lemmaList = new LemmaList();
+                    List<String> lemmaListOfPage = lemmaList.distributeTheWork(pageList.get(x).getContent());
                     lemmasListAllPages.put(pageList.get(x).getId(), lemmaListOfPage);
                     SEMAPHORE.release();
                 });
@@ -58,7 +59,7 @@ public class FormationTableLemmas {
             }
             assert thread != null;
             thread.join();
-            Thread.sleep(100);
+            //Thread.sleep(100);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -175,7 +176,7 @@ public class FormationTableLemmas {
         Iterable<Page> pages = pageRepository.findAll();
         for (Page page : pages) {
             if (page.getPath().equals(url)) {
-                List<String> lemmasListOfPage = createListLemmas(page.getContent());
+                List<String> lemmasListOfPage = lemmaList.distributeTheWork(page.getContent());
                 lemmasListAllPages.put(page.getId(), lemmasListOfPage);
                 createMapLemmasFromTableLemma();
                 createListLemmasFromTableIndexes();
@@ -193,36 +194,11 @@ public class FormationTableLemmas {
         }
     }
 
-    public List<String> createListLemmas(String content) {
-
-        List<String> lemmasListOfPage = new ArrayList<>();
-        try {
-            LuceneMorphology luceneMorph = new RussianLuceneMorphology();
-            String[] rusWords = content.toLowerCase(Locale.ROOT)
-                    .replaceAll("([^а-я\\s])", " ")
-                    .trim()
-                    .split("\\s+");
-
-            for (String rusWord : rusWords) {
-                if (rusWord.length() > 1) {
-                    List<String> morphInfo = luceneMorph.getMorphInfo(rusWord);
-                    String word = morphInfo.get(0);
-                    if (!(word.contains("МЕЖД") || word.contains("СОЮЗ") ||
-                            word.contains("ПРЕДЛ") || word.contains("ЧАСТ"))) {
-                        List<String> normalForms = luceneMorph.getNormalForms(rusWord);
-                        lemmasListOfPage.addAll(normalForms);
-                    }
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return lemmasListOfPage;
-    }
-
     public void createMapLemmasFromTableLemma() {
 
-        for (Map.Entry<Integer, List<String>> entry : lemmasListAllPages.entrySet()) {
+        HashMap<Integer, List<String>> lemmasListAllPagesCopy = new HashMap<>(lemmasListAllPages);
+
+        for (Map.Entry<Integer, List<String>> entry : lemmasListAllPagesCopy.entrySet()) {
             HashSet<String> lemmasListFromTableLemmas = new HashSet<>(entry.getValue());
             for (String lemma : lemmasListFromTableLemmas) {
                 if (lemmasMapFromTableLemmas.containsKey(lemma)) {
@@ -236,7 +212,9 @@ public class FormationTableLemmas {
 
     public void createListLemmasFromTableIndexes() {
 
-        for (Map.Entry<Integer, List<String>> entry : lemmasListAllPages.entrySet()) {
+        HashMap<Integer, List<String>> lemmasListAllPagesCopy = new HashMap<>(lemmasListAllPages);
+
+        for (Map.Entry<Integer, List<String>> entry : lemmasListAllPagesCopy.entrySet()) {
             HashMap<String, Integer> map = new HashMap<>();
             for (String lemma : entry.getValue()) {
                 if (map.containsKey(lemma)) {

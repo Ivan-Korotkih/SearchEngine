@@ -7,7 +7,7 @@ import searchengine.dto.statistics.response.Data;
 import searchengine.dto.statistics.response.Response;
 import searchengine.model.Lemma;
 import searchengine.model.SiteTable;
-import searchengine.service.FormationTableLemmas;
+
 
 import java.util.*;
 
@@ -15,7 +15,7 @@ import java.util.*;
 public class FormationResponseFromSearchQuery {
     private final JdbcTemplate jdbcTemplate;
     @Autowired
-    FormationTableLemmas formationTableLemmas;
+    LemmaList lemmaList;
     @Autowired
     CheckingSearchQuery checkingSearchQuery;
     private List<List<Lemma>> sortedAscendingLemmaList;
@@ -24,9 +24,8 @@ public class FormationResponseFromSearchQuery {
     private List<Data> dataList;
     private final int[] ratioSnippet = {25, 20, 15, 15, 10, 10, 5, 5, 5, 5};
 
-    public FormationResponseFromSearchQuery(JdbcTemplate jdbcTemplate, FormationTableLemmas formationTableLemmas) {
+    public FormationResponseFromSearchQuery(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        this.formationTableLemmas = formationTableLemmas;
     }
 
     public Response searchPagesThatMeetTheQuery(Response response, int limit) {
@@ -207,8 +206,10 @@ public class FormationResponseFromSearchQuery {
     }
 
     public String searchSnippet(String content) {
+        lemmaList = new LemmaList();
 
-        List<String> lemmaContent = formationTableLemmas.createListLemmas(content);
+        List<String> lemmaContent = new ArrayList<>(lemmaList.distributeTheWork(content));
+
         String[] text = lemmaContent.toArray(new String[0]);
         List<String> result = new ArrayList<>();
         int lengthSnippet = ratioSnippet[checkingSearchQuery.lemmaListOfQuery.size()];

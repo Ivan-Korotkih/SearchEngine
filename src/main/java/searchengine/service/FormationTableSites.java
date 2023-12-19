@@ -33,6 +33,7 @@ public class FormationTableSites {
     FormationTablePages formationTablePages;
     @Autowired
     FormationTableLemmas formationTableLemmas;
+
     public FormationTableSites(SitesList sitesList, SiteTableRepository siteTableRepository, JdbcTemplate jdbcTemplate) {
         this.sitesList = sitesList;
         this.siteTableRepository = siteTableRepository;
@@ -70,7 +71,6 @@ public class FormationTableSites {
         jdbcTemplate.update("TRUNCATE lemmas");
         jdbcTemplate.update("TRUNCATE pages");
         jdbcTemplate.update("DELETE FROM sites");
-        jdbcTemplate.update("ALTER TABLE pages ADD KEY (content(30))");
         allLinksSite.clear();
     }
 
@@ -93,10 +93,10 @@ public class FormationTableSites {
                 siteTable.setLastError(null);
                 siteTableRepository.save(siteTable);
 
-                new Thread(() ->{
+                new Thread(() -> {
                     ForkJoinPool forkJoinPool = new ForkJoinPool();
                     forkJoinPool.invoke(new Indexing(site.getUrl(), siteTable));
-                    if (isCanWork()){
+                    if (isCanWork()) {
                         siteTable.setStatus(SiteTableEnum.INDEXED);
 
                     } else {
@@ -106,7 +106,7 @@ public class FormationTableSites {
                     siteTable.setStatusTime(LocalDateTime.now());
                     siteTableRepository.save(siteTable);
                     forkJoinPool.shutdown();
-                    if (isCanWork){
+                    if (isCanWork) {
                         formationTableLemmas.fillingTablesLemmasAndIndexes(siteTable.getId());
                     }
                     System.out.println("Закончили искать страницы сайта " + site.getName());
@@ -169,25 +169,30 @@ public class FormationTableSites {
                         Elements elements = document.select("a[href]");
                         elements.forEach(element -> {
                             String href = element.attr("abs:href");
-                            href = href.toLowerCase().trim();
-                            if (href.startsWith(siteTable.getUrl())) {
-                                if (!(href.contains("?") || href.contains("#"))) {
-                                    if (!(href.endsWith(".jpg") || href.endsWith(".pdf") || href.endsWith(".jpeg")
-                                            || href.endsWith(".png") || href.endsWith(".xlsx")
-                                            || href.endsWith(".eps") || href.endsWith(".doc"))) {
-                                        tasks.add(new Indexing(href, siteTable));
-                                    }
-                                }
+                            if (isLinkAppropriate(href)) {
+                                tasks.add(new Indexing(href, siteTable));
                             }
                         });
                         invokeAll(tasks);
                     } catch (HttpStatusException e) {
-                        formationTablePages.addNewPageToTablePages(link,"", e.getStatusCode(), siteTable);
+                        formationTablePages.addNewPageToTablePages(link, "", e.getStatusCode(), siteTable);
                     } catch (IOException e) {
                         System.out.println(e.getMessage());
                     }
                 }
             }
+        }
+
+        public boolean isLinkAppropriate(String href) {
+            href = href.toLowerCase().trim();
+            if (href.startsWith(siteTable.getUrl())) {
+                if (!(href.contains("?") || href.contains("#"))) {
+                    return !(href.endsWith(".jpg") || href.endsWith(".pdf") || href.endsWith(".jpeg")
+                            || href.endsWith(".png") || href.endsWith(".xlsx")
+                            || href.endsWith(".eps") || href.endsWith(".doc"));
+                }
+            }
+            return false;
         }
     }
 }

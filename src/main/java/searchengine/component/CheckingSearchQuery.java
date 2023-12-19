@@ -5,7 +5,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import searchengine.dto.statistics.response.Response;
 import searchengine.model.SiteTable;
-import searchengine.service.FormationTableLemmas;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +12,7 @@ import java.util.List;
 public class CheckingSearchQuery {
     private final JdbcTemplate jdbcTemplate;
     @Autowired
-    FormationTableLemmas formationTableLemmas;
+    LemmaList lemmaList;
     @Autowired
     FormationResponseFromSearchQuery formationResponseFromSearchQuery;
     public String[] queryArray;
@@ -29,9 +28,10 @@ public class CheckingSearchQuery {
 
         queryArray = query.split("\\s+");
 
-        if (queryArray.length > 5) {
+        if (queryArray.length > 5 && query.length() > 100) {
             response.setResult(false);
-            response.setError("Задан слишком длинный запрос (максимальное количество слов - 5)");
+            response.setError("Задан слишком длинный запрос (максимальное количество слов - 5, " +
+                              "max количество символов - 100)");
             return response;
         }
         if (query.trim().isEmpty()) {
@@ -41,7 +41,7 @@ public class CheckingSearchQuery {
         }
         if (isInvalidQuery(query)) {
             response.setResult(false);
-            response.setError("Введённый поисковый запрос не содержит русских слов");
+            response.setError("Введённый поисковый запрос не содержит русских и английских слов");
             return response;
         }
         if (isIndexedSite(site)) {
@@ -54,7 +54,8 @@ public class CheckingSearchQuery {
     }
 
     public boolean isInvalidQuery(String query) {
-        lemmaListOfQuery = new ArrayList<>(formationTableLemmas.createListLemmas(query));
+        lemmaList = new LemmaList();
+        lemmaListOfQuery = new ArrayList<>(lemmaList.distributeTheWork(query));
         return lemmaListOfQuery.isEmpty();
     }
 
