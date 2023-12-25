@@ -57,7 +57,7 @@ public class LemmaList {
                             word.contains(" МС") || word.contains(" Г") || word.contains(" КР") || word.contains(" Н")
                             || word.contains(" ИНФИНИТИВ") || word.contains(" ДЕЕПРИЧАСТИЕ") || word.contains(" ЧИСЛ")){
                         List<String> normalForms = luceneMorphRus.getNormalForms(rusWord);
-                        lemmaList.addAll(normalForms);
+                        lemmaList.add(normalForms.get(0));
                     }
                 }
             }
@@ -81,7 +81,7 @@ public class LemmaList {
                             word.contains(" ADVERB") || word.contains(" NUMERAL") || word.contains(" MOD") ||
                             word.contains(" PN") || word.contains(" VBE")) {
                         List<String> normalForms = luceneMorphEng.getNormalForms(engWord);
-                        lemmaList.addAll(normalForms);
+                        lemmaList.add(normalForms.get(0));
                     }
                 }
             }
