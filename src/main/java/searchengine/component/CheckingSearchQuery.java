@@ -8,6 +8,8 @@ import searchengine.model.SiteTable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+
 @Component
 public class CheckingSearchQuery {
     private final JdbcTemplate jdbcTemplate;
@@ -18,17 +20,19 @@ public class CheckingSearchQuery {
     public String[] queryArray;
     public List<String> lemmaListOfQuery;
     public List<SiteTable> siteOfQueryList;
-
     public CheckingSearchQuery(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     public Response getResponseFromSearch(String query, String site, int limit) {
+
+        long start = System.currentTimeMillis();
+
         Response response = new Response();
 
-        queryArray = query.split("\\s+");
+        queryArray = query.toLowerCase(Locale.ROOT).replaceAll("(?U)\\pP", "").split("\\s+");
 
-        if (queryArray.length > 5 && query.length() > 100) {
+        if (queryArray.length > 5 || query.length() > 100) {
             response.setResult(false);
             response.setError("Задан слишком длинный запрос (максимальное количество слов - 5, " +
                               "max количество символов - 100)");
@@ -50,12 +54,16 @@ public class CheckingSearchQuery {
             response.setResult(false);
             response.setError("Поиск невозможен сайты(сайт) имеют статус INDEXING или FAILED");
         }
+
+        System.out.println("Время обработки запроса = " + (System.currentTimeMillis() - start));
+
         return response;
     }
 
     public boolean isInvalidQuery(String query) {
         lemmaList = new LemmaList();
         lemmaListOfQuery = new ArrayList<>(lemmaList.distributeTheWork(query));
+        System.out.println(lemmaListOfQuery);
         return lemmaListOfQuery.isEmpty();
     }
 

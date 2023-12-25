@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.Semaphore;
+
 
 @Service
 public class FormationTableLemmas {
@@ -26,8 +26,6 @@ public class FormationTableLemmas {
     private HashMap<Integer, List<String>> lemmasListAllPages;
     private Map<String, Integer> lemmasMapFromTableLemmas;
     private List<String[]> lemmasListFromTableIndex;
-    private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final Semaphore SEMAPHORE = new Semaphore(CORES, true);
     @Autowired
     FormationTableIndexes formationTableIndexes;
     @Autowired
@@ -40,28 +38,15 @@ public class FormationTableLemmas {
     }
 
     public synchronized void fillingTablesLemmasAndIndexes(int siteId) {
+
         createListPagesOfSite(siteId);
         lemmasListAllPages = new HashMap<>();
         lemmasMapFromTableLemmas = new HashMap<>();
         lemmasListFromTableIndex = new ArrayList<>();
-        Thread thread = null;
-        try {
-            for (int i = 0; i < pageList.size(); i++) {
-                int x = i;
-                thread = new Thread(() -> {
-                    lemmaList = new LemmaList();
-                    List<String> lemmaListOfPage = lemmaList.distributeTheWork(pageList.get(x).getContent());
-                    lemmasListAllPages.put(pageList.get(x).getId(), lemmaListOfPage);
-                    SEMAPHORE.release();
-                });
-                thread.start();
-                SEMAPHORE.acquire();
-            }
-            assert thread != null;
-            thread.join();
-            //Thread.sleep(100);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        for (int i = 0; i < pageList.size(); i++){
+            lemmaList = new LemmaList();
+            List<String> lemmaListOfPage = lemmaList.distributeTheWork(pageList.get(i).getContent());
+            lemmasListAllPages.put(pageList.get(i).getId(), lemmaListOfPage);
         }
         createMapLemmasFromTableLemma();
         createListLemmasFromTableIndexes();
@@ -70,6 +55,7 @@ public class FormationTableLemmas {
     }
 
     public void createListPagesOfSite(int siteId) {
+
         pageList = new ArrayList<>();
         Iterable<Page> pages = pageRepository.findAll();
         for (Page page : pages) {
@@ -91,6 +77,7 @@ public class FormationTableLemmas {
     }
 
     public boolean isValidURL(String url) {
+
         try {
             new URL(url);
             String newUrl = url.endsWith("/") ? url : url + "/";
@@ -114,6 +101,7 @@ public class FormationTableLemmas {
     }
 
     public boolean isContainsInTablePages(String url, SiteTable site) {
+
         String urlFromCheck = url.replaceFirst(site.getUrl(), "");
         Iterable<Page> pages = pageRepository.findAll();
         for (Page page : pages) {
@@ -127,6 +115,7 @@ public class FormationTableLemmas {
     }
 
     public void deletingPageFromTablesPagesLemmasIndexes(String url, SiteTable site) {
+
         String chengUrl = url.replaceFirst(site.getUrl(), "");
         int pageId = jdbcTemplate.queryForObject("SELECT id FROM pages WHERE path = '" + chengUrl + "'", Integer.class);
 
@@ -147,6 +136,7 @@ public class FormationTableLemmas {
     }
 
     public void writeToTablesPagesNewPage(String url, SiteTable site) {
+
         int code;
         String content = "";
         try {
@@ -168,6 +158,7 @@ public class FormationTableLemmas {
     }
 
     public void writeToTablesLemmasIndexesNewPage(String url) {
+
         lemmasListAllPages = new HashMap<>();
         lemmasMapFromTableLemmas = new HashMap<>();
         lemmasListFromTableIndex = new ArrayList<>();

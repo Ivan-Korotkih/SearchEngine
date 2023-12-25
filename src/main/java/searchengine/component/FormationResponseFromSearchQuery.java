@@ -5,27 +5,33 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import searchengine.dto.statistics.response.Data;
 import searchengine.dto.statistics.response.Response;
+import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.SiteTable;
-
+import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
 
 import java.util.*;
 
 @Component
 public class FormationResponseFromSearchQuery {
     private final JdbcTemplate jdbcTemplate;
-    @Autowired
-    LemmaList lemmaList;
+    private LemmaRepository lemmaRepository;
+    private IndexRepository indexRepository;
     @Autowired
     CheckingSearchQuery checkingSearchQuery;
+    @Autowired
+    SearchSnippet searchSnippet;
     private List<List<Lemma>> sortedAscendingLemmaList;
     private String answerForCheckLemma;
     private int pageIdListSize;
     private List<Data> dataList;
-    private final int[] ratioSnippet = {25, 20, 15, 15, 10, 10, 5, 5, 5, 5};
 
-    public FormationResponseFromSearchQuery(JdbcTemplate jdbcTemplate) {
+    public FormationResponseFromSearchQuery(JdbcTemplate jdbcTemplate, LemmaRepository lemmaRepository,
+                                            IndexRepository indexRepository) {
         this.jdbcTemplate = jdbcTemplate;
+        this.lemmaRepository = lemmaRepository;
+        this.indexRepository = indexRepository;
     }
 
     public Response searchPagesThatMeetTheQuery(Response response, int limit) {
@@ -117,7 +123,7 @@ public class FormationResponseFromSearchQuery {
     }
 
     public List<Integer> creatingPageIdList() {
-
+        long start1 = System.currentTimeMillis();
         //создаем список из page (pageId), на которых встречаются все леммы
         List<Integer> pageIdList = new ArrayList<>();
         for (List<Lemma> lemmaList : sortedAscendingLemmaList) {
@@ -136,12 +142,13 @@ public class FormationResponseFromSearchQuery {
             pageIdList.addAll(pageList);
         }
         System.out.println("Найдено страниц сайта " + pageIdList.size());
+        System.out.println("создаем список из page (pageId), на которых встречаются все леммы = " + (System.currentTimeMillis() - start1));
         return pageIdList;
     }
 
     public List<Map.Entry<Integer, Float>> calculatingRelevance(List<Integer> pageIdList) {
+        /*//подсчитываем абсолютную релевантность для каждой страницы (сумму всех rank всех найденных на странице лемм)
 
-        //подсчитываем абсолютную релевантность для каждой страницы
         HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
         for (int pageId : pageIdList) {
             int absoluteRelevance = 0;
@@ -152,6 +159,28 @@ public class FormationResponseFromSearchQuery {
                 absoluteRelevance += rank;
             }
             absoluteRelevanceList.put(pageId, absoluteRelevance);
+        }*/
+
+        HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
+
+        List<Integer> lemmaId = new ArrayList<>();
+
+        Iterable<Lemma> lemmaIterable = lemmaRepository.findAll();
+        for (Lemma lemma : lemmaIterable){
+            if (checkingSearchQuery.lemmaListOfQuery.contains(lemma.getLemma())){
+                lemmaId.add(lemma.getId());
+            }
+        }
+        Iterable<Index> indexIterable = indexRepository.findAll();
+        for (Index index : indexIterable) {
+            if (lemmaId.contains(index.getLemmaId()) && pageIdList.contains(index.getPageId())) {
+                if (absoluteRelevanceList.containsKey(index.getPageId())) {
+                    absoluteRelevanceList.put(index.getPageId(), absoluteRelevanceList.get(index.getPageId())
+                            + (int) index.getRank());
+                } else {
+                    absoluteRelevanceList.put(index.getPageId(), (int) index.getRank());
+                }
+            }
         }
 
         //подсчитываем относительную релевантность
@@ -199,56 +228,12 @@ public class FormationResponseFromSearchQuery {
             int finishTitle = content.indexOf("</title>");
             data.setTitle(content.substring(startTitle, finishTitle));
 
-            data.setSnippet(searchSnippet(content));
+            long start = System.currentTimeMillis();
+            data.setSnippet(searchSnippet.distributionOfWorks(checkingSearchQuery.queryArray, content));
+            System.out.println("Время поиска снипетта = " + (System.currentTimeMillis() - start));
 
             dataList.add(data);
         }
-    }
-
-    public String searchSnippet(String content) {
-        lemmaList = new LemmaList();
-
-        List<String> lemmaContent = new ArrayList<>(lemmaList.distributeTheWork(content));
-
-        String[] text = lemmaContent.toArray(new String[0]);
-        List<String> result = new ArrayList<>();
-        int lengthSnippet = ratioSnippet[checkingSearchQuery.lemmaListOfQuery.size()];
-
-        for (String s : checkingSearchQuery.lemmaListOfQuery) {
-            boolean isContains = false;
-            for (String r : result) {
-                if (r.contains(s)) {
-                    isContains = true;
-                    break;
-                }
-            }
-            if (!isContains) {
-                int position = 0;
-                for (int i = 0; i < text.length; i++) {
-                    if (text[i].equals(s)) {
-                        position = i;
-                        break;
-                    }
-                }
-                StringBuilder stringBuilder = new StringBuilder();
-                for (int i = position; i < (Math.min(position + lengthSnippet, text.length)); i++) {
-                    stringBuilder.append(text[i]).append(" ");
-                }
-                result.add(stringBuilder.toString());
-            }
-        }
-        StringBuilder finalSnippet = new StringBuilder();
-        for (String r : result) {
-            String stringR = r;
-            for (String l : checkingSearchQuery.lemmaListOfQuery) {
-                stringR = stringR.replace(l + " ", " <b>" + l + "</b> ");
-            }
-            for (String q : checkingSearchQuery.queryArray) {
-                stringR = stringR.replace(q + " ", " <b>" + q + "</b> ");
-            }
-            finalSnippet.append(stringR).append(" ");
-        }
-        return finalSnippet.toString();
     }
 
     public Response scrollingThroughPages(int offset, int limit) {

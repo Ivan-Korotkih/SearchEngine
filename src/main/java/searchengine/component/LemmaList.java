@@ -23,16 +23,14 @@ public class LemmaList {
 
         if (!content.equals("")) {
             conversionContentToWords(content);
-            synchronized (this){
-                rusLemmas.addAll(createRusLemmaList());
-                engLemmas.addAll(createEngLemmaList());
-            }
+            rusLemmas.addAll(createRusLemmaList());
+            engLemmas.addAll(createEngLemmaList());
             combiningLemmaLists();
         }
         return getLemmasListAll();
     }
 
-    public synchronized void conversionContentToWords(String content) {
+    public void conversionContentToWords(String content) {
 
         String text = Jsoup.parse(content).text();
         rusWords = text.toLowerCase(Locale.ROOT)
@@ -43,7 +41,6 @@ public class LemmaList {
                 .replaceAll("([^a-z\\s])", " ")
                 .trim()
                 .split("\\s+");
-
     }
 
     public List<String> createRusLemmaList() {
@@ -95,10 +92,10 @@ public class LemmaList {
     }
 
     public void combiningLemmaLists() {
-        if (rusLemmas.size() != 0){
+        if (rusLemmas.size() != 0) {
             lemmasListAll.addAll(rusLemmas);
         }
-        if (engLemmas.size() != 0){
+        if (engLemmas.size() != 0) {
             lemmasListAll.addAll(engLemmas);
         }
     }
