@@ -49,7 +49,7 @@ public class SearchSnippet {
         int counter = 0;
         int position = -1;
         for (int i = 0; i < contentArray.length; i++) {
-            String w = contentArray[i].toLowerCase(Locale.ROOT).replaceAll("(?U)[\\pP\\s]", "");
+            String w = contentArray[i].toLowerCase(Locale.ROOT).replaceAll("([^а-яa-z\\s])", "");
             if (queryList.contains(w)) {
                 counter = lengthSnippet;
                 position = i;

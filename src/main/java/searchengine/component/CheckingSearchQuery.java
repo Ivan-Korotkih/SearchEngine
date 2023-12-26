@@ -30,7 +30,7 @@ public class CheckingSearchQuery {
 
         Response response = new Response();
 
-        queryArray = query.toLowerCase(Locale.ROOT).replaceAll("(?U)\\pP", "").split("\\s+");
+        queryArray = query.toLowerCase(Locale.ROOT).replaceAll("([^а-яa-z\\s])", "").split("\\s+");
 
         if (queryArray.length > 5 || query.length() > 100) {
             response.setResult(false);
