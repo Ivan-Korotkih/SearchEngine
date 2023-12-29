@@ -16,11 +16,12 @@ public class SearchSnippet {
     List<String> lemmas;
     StringBuilder snippet;
     private int lengthSnippet;
-    private final int[] ratioSnippet = {25, 20, 15, 15, 10, 10, 5, 5, 5, 5};
+    private final int[] ratioSnippet = {250, 170, 120, 120, 70, 70};
 
     public String distributionOfWorks(String[] queryArray, String content) {
 
         snippet = new StringBuilder();
+        lengthSnippet = ratioSnippet[queryArray.length];
         String text = Jsoup.parse(content).text();
         fastSearchSnippet(queryArray, text);
         return snippet.toString();
@@ -29,53 +30,28 @@ public class SearchSnippet {
     public void fastSearchSnippet(String[] queryArray, String text) {
 
         String query = String.join(" ", queryArray);
-
-        if (text.contains(query)) {
-            int start = text.indexOf(query);
-            String snippetBold = text.substring(start, Math.min(start + 190, text.length()))
-                                     .replaceAll(query, "<b>" + query + "</b>");
-            snippet.append(snippetBold);
+        if (text.toLowerCase().contains(query)) {
+            formingSnippet(query, text);
         } else {
-            lengthSnippet = ratioSnippet[queryArray.length];
-            List<String> queryList = new ArrayList<>(List.of(queryArray));
-            String[] textArray = text.split("\\s+");
             lemmas = new ArrayList<>(checkingSearchQuery.lemmaListOfQuery);
-            slowSearchSnippet(queryList, textArray, text);
+            comparisonLemmasQueryAndText(text);
         }
     }
 
-    public void slowSearchSnippet(List<String> queryList, String[] contentArray, String text) {
+    public void formingSnippet(String query, String text) {
 
-        int counter = 0;
-        int position = -1;
-        for (int i = 0; i < contentArray.length; i++) {
-            String w = contentArray[i].toLowerCase(Locale.ROOT).replaceAll("([^а-яa-z\\s])", "");
-            if (queryList.contains(w)) {
-                counter = lengthSnippet;
-                position = i;
-                queryList.remove(w);
-                lemmas.remove(w);
-            }
-            if (counter > 0) {
-                snippet.append(position == i ? "<b>" + contentArray[i] + "</b>" : contentArray[i]).append(" ");
-                counter--;
-            }
-        }
-        if (queryList.size() != 0) {
-            List<String> lemmasCopy = new ArrayList<>(comparisonLemmasQueryAndText(text));
-            slowSearchSnippet(lemmasCopy, contentArray, text);
-        }
+        int start = text.toLowerCase(Locale.ROOT).indexOf(query);
+        String textSnippet = text.substring(start, Math.min(start + lengthSnippet, text.length()));
+        snippet.append("...<b>").append(textSnippet, 0, query.length()).append("</b>")
+                .append(textSnippet.substring(query.length())).append("... ");
     }
 
-    public HashSet<String> comparisonLemmasQueryAndText(String text) {
+    public void comparisonLemmasQueryAndText(String text) {
 
         String[] rusWords = text.toLowerCase(Locale.ROOT)
                 .replaceAll("([^а-я\\s])", " ")
                 .trim()
-                .split("\\s+");
-
-        HashSet<String> lemmasCopy = new HashSet<>();
-
+                .split("\\s");
         try {
             LuceneMorphology luceneMorphRus = new RussianLuceneMorphology();
 
@@ -89,8 +65,9 @@ public class SearchSnippet {
                         List<String> normalForms = luceneMorphRus.getNormalForms(rusWord);
                         if (lemmas.contains(normalForms.get(0))) {
                             lemmas.remove(normalForms.get(0));
-                            if (!rusWord.equals(normalForms.get(0))) {
-                                lemmasCopy.add(rusWord);
+                            formingSnippet(rusWord, text);
+                            if (lemmas.isEmpty()) {
+                                break;
                             }
                         }
                     }
@@ -99,6 +76,5 @@ public class SearchSnippet {
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
-        return lemmasCopy;
     }
 }

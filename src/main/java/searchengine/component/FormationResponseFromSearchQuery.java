@@ -147,7 +147,7 @@ public class FormationResponseFromSearchQuery {
     }
 
     public List<Map.Entry<Integer, Float>> calculatingRelevance(List<Integer> pageIdList) {
-        /*//подсчитываем абсолютную релевантность для каждой страницы (сумму всех rank всех найденных на странице лемм)
+        //подсчитываем абсолютную релевантность для каждой страницы (сумму всех rank всех найденных на странице лемм)
 
         HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
         for (int pageId : pageIdList) {
@@ -159,9 +159,9 @@ public class FormationResponseFromSearchQuery {
                 absoluteRelevance += rank;
             }
             absoluteRelevanceList.put(pageId, absoluteRelevance);
-        }*/
+        }
 
-        HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
+        /*HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
 
         List<Integer> lemmaId = new ArrayList<>();
 
@@ -181,7 +181,7 @@ public class FormationResponseFromSearchQuery {
                     absoluteRelevanceList.put(index.getPageId(), (int) index.getRank());
                 }
             }
-        }
+        }*/
 
         //подсчитываем относительную релевантность
         int maxAbsoluteRelevance = Collections.max(new ArrayList<>(absoluteRelevanceList.values()));
