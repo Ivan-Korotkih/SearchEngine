@@ -94,19 +94,11 @@ public class FormationResponseFromSearchQuery {
         for (SiteTable site : checkingSearchQuery.siteOfQueryList) {
             HashMap<Lemma, Integer> map = new HashMap<>();
             for (String lemmaOfQuery : checkingSearchQuery.lemmaListOfQuery) {
-                String sqlLemma = "SELECT * FROM lemmas WHERE lemma = '"
-                        + lemmaOfQuery + "' AND site_id = " + site.getId();
-                Map<String, Object> object = jdbcTemplate.queryForMap(sqlLemma);
-                Lemma lemma = new Lemma();
-                lemma.setId((Integer) object.get("id"));
-                lemma.setFrequency((Integer) object.get("frequency"));
-                lemma.setLemma((String) object.get("lemma"));
-                lemma.setSite(site);
+                Lemma lemma = lemmaRepository.findByLemmaAndSite(lemmaOfQuery, site);
                 map.put(lemma, lemma.getFrequency());
             }
             mapLemmaFrequencyList.add(map);
         }
-
         // сортируем каждую Мар в списке mapLemmaFrequencyList по возрастанию, и создаем отсортированный список лем
         // для каждого сайта
         sortedAscendingLemmaList = new ArrayList<>();
@@ -123,16 +115,17 @@ public class FormationResponseFromSearchQuery {
     }
 
     public List<Integer> creatingPageIdList() {
-        long start1 = System.currentTimeMillis();
+
         //создаем список из page (pageId), на которых встречаются все леммы
         List<Integer> pageIdList = new ArrayList<>();
         for (List<Lemma> lemmaList : sortedAscendingLemmaList) {
             List<Integer> pageList = new ArrayList<>();
             for (int i = 0; i < lemmaList.size(); i++) {
-                String sql = "SELECT indexes.page_id FROM indexes JOIN lemmas on indexes.lemma_id = lemmas.id " +
-                        "WHERE lemma = '" + lemmaList.get(i).getLemma() + "' AND site_id = "
-                        + lemmaList.get(i).getSite().getId();
-                List<Integer> pages = jdbcTemplate.queryForList(sql, Integer.class);
+                List<Index> indexList = indexRepository.findByLemmaId(lemmaList.get(i).getId());
+                List<Integer> pages = new ArrayList<>();
+                for (Index index : indexList) {
+                    pages.add(index.getPageId());
+                }
                 if (i == 0) {
                     pageList.addAll(pages);
                 } else {
@@ -142,53 +135,44 @@ public class FormationResponseFromSearchQuery {
             pageIdList.addAll(pageList);
         }
         System.out.println("Найдено страниц сайта " + pageIdList.size());
-        System.out.println("создаем список из page (pageId), на которых встречаются все леммы = " + (System.currentTimeMillis() - start1));
         return pageIdList;
     }
 
     public List<Map.Entry<Integer, Float>> calculatingRelevance(List<Integer> pageIdList) {
         //подсчитываем абсолютную релевантность для каждой страницы (сумму всех rank всех найденных на странице лемм)
 
-        HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
-        for (int pageId : pageIdList) {
-            int absoluteRelevance = 0;
-            for (String lemma : checkingSearchQuery.lemmaListOfQuery) {
-                String sql = "SELECT indexes.`rank` FROM indexes JOIN lemmas ON lemmas.id = indexes.lemma_id " +
-                        "WHERE indexes.page_id = " + pageId + " AND lemmas.lemma = '" + lemma + "'";
-                Integer rank = jdbcTemplate.queryForObject(sql, Integer.class);
-                absoluteRelevance += rank;
-            }
-            absoluteRelevanceList.put(pageId, absoluteRelevance);
+        HashMap<Integer, Float> absoluteRelevanceList = new HashMap<>();
+
+        List<Integer> lemmaId1 = new ArrayList<>();
+        List<Lemma> l = new ArrayList<>();
+        for (String lemmaOfQuery : checkingSearchQuery.lemmaListOfQuery) {
+            l.addAll(lemmaRepository.findByLemma(lemmaOfQuery));
+        }
+        for (Lemma lemma : l) {
+            lemmaId1.add(lemma.getId());
         }
 
-        /*HashMap<Integer, Integer> absoluteRelevanceList = new HashMap<>();
-
-        List<Integer> lemmaId = new ArrayList<>();
-
-        Iterable<Lemma> lemmaIterable = lemmaRepository.findAll();
-        for (Lemma lemma : lemmaIterable){
-            if (checkingSearchQuery.lemmaListOfQuery.contains(lemma.getLemma())){
-                lemmaId.add(lemma.getId());
-            }
+        List<Index> i = new ArrayList<>();
+        for (int lemmaId : lemmaId1) {
+            i.addAll(indexRepository.findByLemmaId(lemmaId));
         }
-        Iterable<Index> indexIterable = indexRepository.findAll();
-        for (Index index : indexIterable) {
-            if (lemmaId.contains(index.getLemmaId()) && pageIdList.contains(index.getPageId())) {
+        for (Index index : i) {
+            if (pageIdList.contains(index.getPageId())) {
                 if (absoluteRelevanceList.containsKey(index.getPageId())) {
                     absoluteRelevanceList.put(index.getPageId(), absoluteRelevanceList.get(index.getPageId())
-                            + (int) index.getRank());
+                            + index.getRank());
                 } else {
-                    absoluteRelevanceList.put(index.getPageId(), (int) index.getRank());
+                    absoluteRelevanceList.put(index.getPageId(), index.getRank());
                 }
             }
-        }*/
+        }
 
         //подсчитываем относительную релевантность
-        int maxAbsoluteRelevance = Collections.max(new ArrayList<>(absoluteRelevanceList.values()));
+        float maxAbsoluteRelevance = Collections.max(new ArrayList<>(absoluteRelevanceList.values()));
 
         HashMap<Integer, Float> relativeRelevanceList = new HashMap<>();
-        for (Map.Entry<Integer, Integer> line : absoluteRelevanceList.entrySet()) {
-            float relativeRelevance = (float) line.getValue() / maxAbsoluteRelevance;
+        for (Map.Entry<Integer, Float> line : absoluteRelevanceList.entrySet()) {
+            float relativeRelevance = line.getValue() / maxAbsoluteRelevance;
             relativeRelevanceList.put(line.getKey(), relativeRelevance);
         }
 
@@ -228,10 +212,7 @@ public class FormationResponseFromSearchQuery {
             int finishTitle = content.indexOf("</title>");
             data.setTitle(content.substring(startTitle, finishTitle));
 
-            long start = System.currentTimeMillis();
             data.setSnippet(searchSnippet.distributionOfWorks(checkingSearchQuery.queryArray, content));
-            System.out.println("Время поиска снипетта = " + (System.currentTimeMillis() - start));
-
             dataList.add(data);
         }
     }
