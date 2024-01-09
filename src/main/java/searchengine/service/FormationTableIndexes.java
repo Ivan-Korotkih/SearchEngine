@@ -8,6 +8,7 @@ import searchengine.repository.LemmaRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+
 @Service
 public class FormationTableIndexes {
     private LemmaRepository lemmaRepository;
@@ -17,6 +18,7 @@ public class FormationTableIndexes {
         this.lemmaRepository = lemmaRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
+
     public void writeDataToTableIndexes(List<String[]> lemmasListFromTableIndex, int siteId) {
 
         List<Index> indexList = new ArrayList<>();

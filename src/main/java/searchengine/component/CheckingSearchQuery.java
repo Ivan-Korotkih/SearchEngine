@@ -20,6 +20,7 @@ public class CheckingSearchQuery {
     public String[] queryArray;
     public List<String> lemmaListOfQuery;
     public List<SiteTable> siteOfQueryList;
+
     public CheckingSearchQuery(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -35,7 +36,7 @@ public class CheckingSearchQuery {
         if (queryArray.length > 5 || query.length() > 100) {
             response.setResult(false);
             response.setError("Задан слишком длинный запрос (максимальное количество слов - 5, " +
-                              "max количество символов - 100)");
+                    "max количество символов - 100)");
             return response;
         }
         if (query.trim().isEmpty()) {

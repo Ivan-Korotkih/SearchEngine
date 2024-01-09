@@ -7,6 +7,7 @@ import searchengine.repository.PageRepository;
 import searchengine.repository.SiteTableRepository;
 
 import java.time.LocalDateTime;
+
 @Service
 public class FormationTablePages {
     private SiteTableRepository siteTableRepository;
@@ -16,7 +17,8 @@ public class FormationTablePages {
         this.siteTableRepository = siteTableRepository;
         this.pageRepository = pageRepository;
     }
-    public void addNewPageToTablePages(String link, String content, int code, SiteTable siteTable){
+
+    public void addNewPageToTablePages(String link, String content, int code, SiteTable siteTable) {
 
         Page page = new Page();
         page.setPath(link.replaceFirst(siteTable.getUrl(), ""));

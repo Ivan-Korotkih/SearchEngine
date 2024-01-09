@@ -21,6 +21,6 @@ public class Index {
     @Column(name = "lemma_id", nullable = false)
     private int lemmaId;
 
-   @Column(name = "\"rank\"", nullable = false)
+    @Column(name = "\"rank\"", nullable = false)
     private float rank;
 }

@@ -20,6 +20,7 @@ public class ApiController {
     @Autowired
     private Search search;
     private StatisticsService statisticsService;
+
     public ApiController(StatisticsService statisticsService) {
         this.statisticsService = statisticsService;
     }
@@ -28,20 +29,24 @@ public class ApiController {
     public ResponseEntity<StatisticsResponse> statistics() {
         return ResponseEntity.ok(statisticsService.getStatistics());
     }
+
     @GetMapping("/startIndexing")
-    public ResponseEntity<Response> startIndexing(){
+    public ResponseEntity<Response> startIndexing() {
         return ResponseEntity.ok(formationTableSites.getResponseToStartIndexing());
     }
+
     @GetMapping("/stopIndexing")
-    public ResponseEntity<Response> stopIndexing(){
+    public ResponseEntity<Response> stopIndexing() {
         return ResponseEntity.ok(formationTableSites.getResponseFromStopIndexing());
     }
+
     @PostMapping("/indexPage")
-    public ResponseEntity<Response> indexPage(@RequestParam ("url") String url){
+    public ResponseEntity<Response> indexPage(@RequestParam("url") String url) {
         return ResponseEntity.ok(formationTableLemmas.getResponseFromIndexPage(url));
     }
+
     @GetMapping("/search")
-    public ResponseEntity<Response> search(@RequestParam ("query") String content, String site, int offset, int limit){
+    public ResponseEntity<Response> search(@RequestParam("query") String content, String site, int offset, int limit) {
         System.out.println(content + "  " + site + "  " + offset + "  " + limit);
         limit = 20;
         return ResponseEntity.ok(search.getResponse(content, site, offset, limit));

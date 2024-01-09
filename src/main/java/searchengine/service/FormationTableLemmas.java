@@ -30,6 +30,7 @@ public class FormationTableLemmas {
     FormationTableIndexes formationTableIndexes;
     @Autowired
     LemmaList lemmaList;
+
     public FormationTableLemmas(SiteTableRepository siteTableRepository, PageRepository pageRepository,
                                 JdbcTemplate jdbcTemplate) {
         this.siteTableRepository = siteTableRepository;
@@ -43,7 +44,7 @@ public class FormationTableLemmas {
         lemmasListAllPages = new HashMap<>();
         lemmasMapFromTableLemmas = new HashMap<>();
         lemmasListFromTableIndex = new ArrayList<>();
-        for (int i = 0; i < pageList.size(); i++){
+        for (int i = 0; i < pageList.size(); i++) {
             lemmaList = new LemmaList();
             List<String> lemmaListOfPage = lemmaList.distributeTheWork(pageList.get(i).getContent());
             lemmasListAllPages.put(pageList.get(i).getId(), lemmaListOfPage);

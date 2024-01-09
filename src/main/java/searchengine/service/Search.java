@@ -17,7 +17,7 @@ public class Search {
         Response response = new Response();
 
         response = offset == 0 ? (checkingSearchQuery.getResponseFromSearch(query, site, limit)) :
-                                 (formationResponseFromSearchQuery.scrollingThroughPages(offset, limit));
+                (formationResponseFromSearchQuery.scrollingThroughPages(offset, limit));
         return response;
     }
 }

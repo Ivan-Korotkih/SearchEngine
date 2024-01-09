@@ -1,4 +1,5 @@
 package searchengine.dto.statistics.response;
+
 @lombok.Data
 public class Data {
     private String site;

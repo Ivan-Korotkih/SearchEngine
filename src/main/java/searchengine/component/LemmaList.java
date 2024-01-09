@@ -55,7 +55,7 @@ public class LemmaList {
                     String word = morphInfo.get(0);
                     if (word.contains(" С") || word.contains(" П") || word.contains(" ПРИЧАСТИЕ") ||
                             word.contains(" МС") || word.contains(" Г") || word.contains(" КР") || word.contains(" Н")
-                            || word.contains(" ИНФИНИТИВ") || word.contains(" ДЕЕПРИЧАСТИЕ") || word.contains(" ЧИСЛ")){
+                            || word.contains(" ИНФИНИТИВ") || word.contains(" ДЕЕПРИЧАСТИЕ") || word.contains(" ЧИСЛ")) {
                         List<String> normalForms = luceneMorphRus.getNormalForms(rusWord);
                         lemmaList.add(normalForms.get(0));
                     }
