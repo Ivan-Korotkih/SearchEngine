@@ -5,20 +5,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.response.Response;
-import searchengine.service.FormationTableLemmas;
-import searchengine.service.FormationTableSites;
-import searchengine.service.Search;
+import searchengine.service.IndexingServiceImpl;
+import searchengine.service.SearchServiceImpl;
 import searchengine.service.StatisticsService;
 
 @RestController
 @RequestMapping("/api")
 public class ApiController {
     @Autowired
-    private FormationTableSites formationTableSites;
+    private IndexingServiceImpl indexingServiceImpl;
     @Autowired
-    private FormationTableLemmas formationTableLemmas;
-    @Autowired
-    private Search search;
+    private SearchServiceImpl searchServiceImpl;
     private StatisticsService statisticsService;
 
     public ApiController(StatisticsService statisticsService) {
@@ -32,23 +29,23 @@ public class ApiController {
 
     @GetMapping("/startIndexing")
     public ResponseEntity<Response> startIndexing() {
-        return ResponseEntity.ok(formationTableSites.getResponseToStartIndexing());
+        return ResponseEntity.ok(indexingServiceImpl.getResponseFromStart());
     }
 
     @GetMapping("/stopIndexing")
     public ResponseEntity<Response> stopIndexing() {
-        return ResponseEntity.ok(formationTableSites.getResponseFromStopIndexing());
+        return ResponseEntity.ok(indexingServiceImpl.getResponseFromStop());
     }
 
     @PostMapping("/indexPage")
     public ResponseEntity<Response> indexPage(@RequestParam("url") String url) {
-        return ResponseEntity.ok(formationTableLemmas.getResponseFromIndexPage(url));
+        return ResponseEntity.ok(indexingServiceImpl.getResponseFromIndexPage(url));
     }
 
     @GetMapping("/search")
     public ResponseEntity<Response> search(@RequestParam("query") String content, String site, int offset, int limit) {
         System.out.println(content + "  " + site + "  " + offset + "  " + limit);
         limit = 20;
-        return ResponseEntity.ok(search.getResponse(content, site, offset, limit));
+        return ResponseEntity.ok(searchServiceImpl.getResponse(content, site, offset, limit));
     }
 }

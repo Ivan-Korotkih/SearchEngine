@@ -2,14 +2,10 @@
 
 indexing-settings:
   sites:
-    - url: https://nikoartgallery.com
-      name: Галерея Нико
     - url: https://www.svetlovka.ru
       name: Светловка
-    - url: https://www.lutherancathedral.ru
-      name: КАФЕДРАЛЬНЫЙ СОБОР
-    - url: https://dombulgakova.ru
-      name: Дом Булгакова
+    - url: https://et-cetera.ru
+      name: МОСКОВСКИЙ ТЕАТР «ET CETERA»
 
 server:
   port: 8080
