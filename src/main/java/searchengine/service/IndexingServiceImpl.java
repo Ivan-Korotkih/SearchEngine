@@ -1,10 +1,7 @@
 package searchengine.service;
 
-import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -16,14 +13,13 @@ import searchengine.repository.PageRepository;
 import searchengine.repository.SiteTableRepository;
 import searchengine.dto.statistics.response.Response;
 import searchengine.utils.LemmaList;
+import searchengine.utils.Indexing;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
 
 @Service
 public class IndexingServiceImpl implements IndexingService {
@@ -32,7 +28,6 @@ public class IndexingServiceImpl implements IndexingService {
     private LemmaRepository lemmaRepository;
     private PageRepository pageRepository;
     private final JdbcTemplate jdbcTemplate;
-    private Vector<String> allLinksSite = new Vector<>();
     private boolean isCanWork;
     private Map<String, Integer> lemmasMapFromTableLemmas;
     private HashMap<Integer, List<String>> lemmasListAllPages;
@@ -40,6 +35,8 @@ public class IndexingServiceImpl implements IndexingService {
     private List<Page> pageList;
     @Autowired
     LemmaList lemmaList;
+    @Autowired
+    Indexing indexingClass;
 
     public IndexingServiceImpl(SitesList sitesList, SiteTableRepository siteTableRepository,
                                LemmaRepository lemmaRepository, PageRepository pageRepository,
@@ -110,7 +107,6 @@ public class IndexingServiceImpl implements IndexingService {
         jdbcTemplate.update("TRUNCATE lemmas");
         jdbcTemplate.update("TRUNCATE pages");
         jdbcTemplate.update("DELETE FROM sites");
-        allLinksSite.clear();
         setCanWork(true);
 
         for (Site site : sitesList.getSites()) {
@@ -130,19 +126,17 @@ public class IndexingServiceImpl implements IndexingService {
                 siteTableRepository.save(siteTable);
 
                 new Thread(() -> {
-                    ForkJoinPool forkJoinPool = new ForkJoinPool();
-                    forkJoinPool.invoke(new Indexing(site.getUrl(), siteTable));
-                    if (isCanWork()) {
-                        siteTable.setStatus(SiteTableEnum.INDEXED);
+                    List<Page> pages = (indexingClass.getPageList(site.getUrl(), siteTable));
 
-                    } else {
-                        siteTable.setStatus(SiteTableEnum.FAILED);
-                        siteTable.setLastError("Индексация остановлена пользователем");
-                    }
+                    SiteTableEnum status = isCanWork() ? SiteTableEnum.INDEXED : SiteTableEnum.FAILED;
+                    String lastError = status == SiteTableEnum.FAILED ? "Индексация остановлена пользователем" : null;
+                    siteTable.setStatus(status);
+                    siteTable.setLastError(lastError);
                     siteTable.setStatusTime(LocalDateTime.now());
                     siteTableRepository.save(siteTable);
-                    forkJoinPool.shutdown();
-                    if (isCanWork) {
+
+                    if (status == SiteTableEnum.INDEXED) {
+                        addDataToTablePages(pages);
                         fillingTablesLemmasAndIndexes(siteTable.getId());
                     }
                     System.out.println("Закончили искать страницы сайта " + site.getName());
@@ -152,6 +146,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     public String checkingResponseSite(String url) {
+
         String responseSite;
         try {
             Jsoup.connect(url).execute();
@@ -165,7 +160,16 @@ public class IndexingServiceImpl implements IndexingService {
         return responseSite;
     }
 
-    public synchronized void fillingTablesLemmasAndIndexes(int siteId) {
+    public void addDataToTablePages(List<Page> pages) {
+
+        for (Page page : pages){
+            pageRepository.save(page);
+            page.getSite().setStatusTime(LocalDateTime.now());
+            siteTableRepository.save(page.getSite());
+        }
+    }
+
+    public void fillingTablesLemmasAndIndexes(int siteId) {
 
         createListPagesOfSite(siteId);
         lemmasListAllPages = new HashMap<>();
@@ -193,6 +197,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     public Response creatingResponseFromIndexPage(String url) {
+
         Response response = new Response();
         if (isValidURL(url)) {
             response.setResult(true);
@@ -400,73 +405,5 @@ public class IndexingServiceImpl implements IndexingService {
         }
         stringBuilder.replace(stringBuilder.length() - 1, stringBuilder.length(), ";");
         jdbcTemplate.update(stringBuilder.toString());
-    }
-
-
-    public class Indexing extends RecursiveAction {
-        private final String link;
-        private final SiteTable siteTable;
-
-        public Indexing(String link, SiteTable siteTable) {
-            this.link = link;
-            this.siteTable = siteTable;
-        }
-
-        @Override
-        protected void compute() {
-            if (isCanWork()) {
-                if (!allLinksSite.contains(link)) {
-                    allLinksSite.add(link);
-                    try {
-                        Connection.Response response = Jsoup.connect(link).execute();
-                        Document document = Jsoup.connect(link)
-                                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                                        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
-                                .get();
-
-                        addNewPageToTablePages(link, document.html(), response.statusCode(), siteTable);
-
-                        List<Indexing> tasks = new ArrayList<>();
-                        Elements elements = document.select("a[href]");
-                        elements.forEach(element -> {
-                            String href = element.attr("abs:href");
-                            if (isLinkAppropriate(href)) {
-                                tasks.add(new Indexing(href, siteTable));
-                            }
-                        });
-                        invokeAll(tasks);
-                    } catch (HttpStatusException e) {
-                        addNewPageToTablePages(link, "", e.getStatusCode(), siteTable);
-                    } catch (IOException e) {
-                        System.out.println(e.getMessage());
-                    }
-                }
-            }
-        }
-
-        public void addNewPageToTablePages(String link, String content, int code, SiteTable siteTable) {
-            Page page = new Page();
-            page.setPath(link.replaceFirst(siteTable.getUrl(), ""));
-            page.setContent(content);
-            page.setCode(code);
-            page.setSite(siteTable);
-            if (!siteTable.getUrl().equals(link)) {
-                pageRepository.save(page);
-            }
-            siteTable.setStatusTime(LocalDateTime.now());
-            siteTableRepository.save(siteTable);
-        }
-
-        public boolean isLinkAppropriate(String href) {
-            href = href.toLowerCase().trim();
-            if (href.startsWith(siteTable.getUrl())) {
-                if (!(href.contains("?") || href.contains("#") || href.substring(siteTable.getUrl().length()).contains(":"))) {
-                    return !(href.endsWith(".jpg") || href.endsWith(".pdf") || href.endsWith(".jpeg")
-                            || href.endsWith(".png") || href.endsWith(".xlsx")
-                            || href.endsWith(".eps") || href.endsWith(".doc"));
-                }
-            }
-            return false;
-        }
     }
 }
